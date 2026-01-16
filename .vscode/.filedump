@@ -1,0 +1,6 @@
+
+		begin
+      f = addfile("/mnt/d/bayesian_calibration_slm/examples/data/LaJollaShores_data.nc","r")
+      print(f)
+		end
+    

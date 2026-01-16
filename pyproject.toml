@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slmcal"
+version = "0.1.0"
+description = "Bayesian calibration + NSGA-II pre-calibration workflow for shoreline evolution models."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  {name = "Lucas Pereira", email = "freitasl@unican.es"}
+]
+keywords = ["shoreline", "bayesian", "calibration", "nsga-ii", "coastal"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.10",
+  "pandas>=2.0",
+  "xarray>=2023.1.0",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+bayes = ["pymc>=5", "arviz>=0.16", "pytensor>=2", "scipy>=1.10"]
+numba = ["numba>=0.58"]
+fastopt = [
+  "numba>=0.58",
+  "fast_optimization @ git+https://github.com/defreitasL/fast_optimization",
+]
+dev = [
+  "pytest>=7",
+  "ruff>=0.1.0",
+  "mypy>=1.5",
+]
+io = ["netCDF4>=1.6"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+addopts = "-q"
