@@ -22,10 +22,6 @@ To install the exact versions used to produce the published results:
 pip install -e ".[paper]"
 ```
 
-Further extras cover the model families that are not part of the published
-results: `spads` (pySPADS signal decomposition) and `moe` (mixture-of-experts,
-SARIMAX).
-
 ## Reproducing the published results
 
 The two study sites (Angourie Back Beach and La Jolla Shores) are reproduced by
@@ -107,7 +103,6 @@ trace = workflow.bayesian_calibrate(
 | Path | Contents |
 |---|---|
 | `src/slmcal/` | The package. Shoreline models, NSGA-II pre-calibration, Bayesian calibration, plotting. |
-| `src/pySPADS/` | Vendored SPADS signal-decomposition code, used by the mixture-of-experts models. |
 | `examples/` | Runnable scripts, including the two that produce the published results. |
 | `notebooks/` | `regenerate_paper_figures.ipynb`, which rebuilds every figure from `outputs/`. |
 | `data/` | Input NetCDF datasets for both sites. |
