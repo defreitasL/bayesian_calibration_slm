@@ -19,6 +19,7 @@ from slmcal.bayes.pymc import (
     PriorMVN,
     PriorKDE,
     PriorCopulaKDE,
+    PriorProduct,
     fit_mvn_prior_from_nsga2,
     fit_kde_prior_from_nsga2,
     fit_copula_kde_prior_from_nsga2,
@@ -43,10 +44,12 @@ class CalibrationWorkflow:
 
     nsga2_result: NSGA2Result | FastOptNSGA2Result | None = None
     prior: Prior | None = None
+    trace: object | None = None
+    ppc: object | None = None
 
     def precalibrate_nsga2(
         self,
-        metrics: tuple[str, ...] = ("kge", "spbias", "spearman"),
+        metrics: tuple[str, ...] = ("kge", "pbias", "spearman"),
         cfg: NSGA2Config = NSGA2Config(),
         fast_cfg: FastOptNSGA2Config | None = None,
         backend: str = "fast_optimization",
@@ -75,6 +78,8 @@ class CalibrationWorkflow:
         self,
         kind: str = "mvn",
         cov_scale: float = 30.0,
+        top_k: int | None = None,
+        cov_inflation: float | None = None,
         bw_method: str | float | None = "scott",
         jitter: float = 1e-9,
         copula_method: str = "factor",
@@ -92,9 +97,10 @@ class CalibrationWorkflow:
         # The fast_optimization backend returns a generic Pareto set without built-in validity helpers.
         if use_valid_only and hasattr(self.nsga2_result, "select_valid"):
             th = validity_thresholds or {}
-            ind, _ = self.nsga2_result.select_valid(**th)
+            ind, obj = self.nsga2_result.select_valid(**th)
         else:
             ind = self.nsga2_result.individuals_raw
+            obj = getattr(self.nsga2_result, "objectives", None)
 
         if ind.shape[0] < 5:
             raise RuntimeError(
@@ -103,10 +109,33 @@ class CalibrationWorkflow:
             )
 
 
+        # Optionally keep only the top-K solutions (scalarized in normalized objective space).
+        if top_k is not None and int(top_k) > 0 and ind.shape[0] > int(top_k):
+            if obj is None:
+                # No objective info available: fall back to random subset.
+                rng = np.random.default_rng(42)
+                idx = rng.choice(ind.shape[0], size=int(top_k), replace=False)
+                ind = ind[idx]
+            else:
+                obj = np.asarray(obj, dtype=float)
+                # Normalize each objective to [0,1] and scalarize by mean.
+                lo = np.nanmin(obj, axis=0)
+                hi = np.nanmax(obj, axis=0)
+                span = hi - lo
+                span[span == 0.0] = 1.0
+                z = (obj - lo) / span
+                score = np.nanmean(z, axis=1)
+                idx = np.argsort(score)[: int(top_k)]
+                ind = ind[idx]
+                # keep matching objectives for potential future use
+                obj = obj[idx]
+
         kind_l = kind.lower().strip()
 
         if kind_l in ("mvn", "gaussian", "normal"):
-            self.prior = fit_mvn_prior_from_nsga2(ind, cov_scale=cov_scale)
+            infl = float(cov_inflation) if cov_inflation is not None else float(cov_scale)
+            # Use selected individuals also as an init pool for chain initialisation.
+            self.prior = fit_mvn_prior_from_nsga2(ind, cov_scale=infl, init_pool=ind)
         elif kind_l in ("kde", "empirical"):
             from slmcal.models.base import bounds_matrix
 
@@ -150,6 +179,11 @@ class CalibrationWorkflow:
         estimate_sigma: bool = False,
         include_bias: bool = True,
         cores: int | None = None,
+        save_outputs: bool = False,
+        out_dir: str | None = None,
+        dataset_predict: TimeSeriesDataset | None = None,
+        n_output_draws: int = 1000,
+        output_max_bytes: int = 500_000_000,
     ):
         if prior_from == "nsga2":
             if self.prior is None:
@@ -172,7 +206,73 @@ class CalibrationWorkflow:
             include_bias=include_bias,
             cores=cores,
         )
+        self.trace = trace
+        self.ppc = ppc
+
+        if save_outputs:
+            if out_dir is None:
+                raise ValueError("out_dir must be provided when save_outputs=True")
+            self.save_bayesian_outputs(
+                out_dir=out_dir,
+                trace=trace,
+                ppc=ppc,
+                dataset_predict=dataset_predict,
+                n_draws=n_output_draws,
+                random_seed=random_seed,
+                sigma_fixed=(sigma if not estimate_sigma else None),
+                include_bias=include_bias,
+                max_bytes=output_max_bytes,
+            )
+
         return trace, ppc
+
+
+    def save_bayesian_outputs(
+        self,
+        *,
+        out_dir: str,
+        trace=None,
+        ppc=None,
+        dataset_predict: TimeSeriesDataset | None = None,
+        n_draws: int = 1000,
+        random_seed: int = 42,
+        sigma_fixed: float | None = None,
+        include_bias: bool = True,
+        include_noise: bool = True,
+        max_bytes: int = 500_000_000,
+    ) -> dict:
+        """Save posterior sampler and decomposed uncertainty propagation files.
+
+        This method is intentionally thin: it delegates to
+        :func:`slmcal.bayes.outputs.save_bayesian_artifacts` so scripts and
+        notebooks can use the same artifact format without instantiating the
+        full workflow object.
+        """
+        if self.prior is None:
+            raise RuntimeError("Prior not built")
+        tr = trace if trace is not None else self.trace
+        if tr is None:
+            raise RuntimeError("No trace available. Run bayesian_calibrate() first or pass trace=...")
+        pp = ppc if ppc is not None else self.ppc
+        ds_pred = dataset_predict if dataset_predict is not None else self.dataset
+
+        from slmcal.bayes.outputs import save_bayesian_artifacts
+
+        return save_bayesian_artifacts(
+            out_dir=out_dir,
+            trace=tr,
+            ppc=pp,
+            prior=self.prior,
+            model=self.model,
+            dataset_predict=ds_pred,
+            n_draws=n_draws,
+            seed=random_seed,
+            sigma_fixed=sigma_fixed,
+            include_bias=include_bias,
+            include_noise=include_noise,
+            max_bytes=max_bytes,
+            metadata={"workflow": self.__class__.__name__},
+        )
 
     
     def prior_summary(self) -> dict:
@@ -208,4 +308,15 @@ class CalibrationWorkflow:
                 "grid_size": int(self.prior.grid.shape[1]),
             }
 
+
+
+        if isinstance(self.prior, PriorProduct):
+            out = {"kind": "product", "n_blocks": len(self.prior.priors), "blocks": []}
+            for pr, d in zip(self.prior.priors, self.prior.dims):
+                out["blocks"].append({
+                    "dim": int(d),
+                    "mean": pr.mean,
+                    "std": np.sqrt(np.diag(pr.cov)),
+                })
+            return out
         raise TypeError(f"Unsupported prior type: {type(self.prior)}")

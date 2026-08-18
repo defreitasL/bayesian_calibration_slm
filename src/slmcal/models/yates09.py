@@ -36,16 +36,16 @@ class Yates09Model:
         if bounds_raw is None:
             # a_pos in [1e-4, 1e+1], b in [1e-3, 100], cacr/cero magnitudes in [1e-6, 1e-1]
             if a_mode_l == "linear":
-                a_bounds = [1e-4, 1e1]
+                a_bounds = [1e-3, 1e-1]
             else:
-                a_bounds = [np.log(1e-4), np.log(1e1)]
+                a_bounds = [np.log(1e-3), np.log(1e1)]
 
             bounds_raw = np.array(
                 [
                     a_bounds,
-                    [1e-3, 100.0],                       # b
-                    [np.log(1e-6), np.log(1e-1)],        # log(|cacr|)
-                    [np.log(1e-6), np.log(1e-1)],        # log(|cero|)
+                    [10, 20.0],                       # b
+                    [np.log(1e-4), np.log(1e-2)],        # log(|cacr|)
+                    [np.log(1e-3), np.log(1e-1)],        # log(|cero|)
                 ],
                 dtype=float,
             )
@@ -76,7 +76,7 @@ class Yates09Model:
     def parameters(self) -> list[ParameterSpec]:
         return list(self._parameters)
 
-    def simulate(self, physical_params: np.ndarray, dataset: TimeSeriesDataset) -> np.ndarray:
+    def simulate(self, physical_params: np.ndarray, dataset: TimeSeriesDataset, y0: float | None = None) -> np.ndarray:
         try:
             from IHSetYates09 import yates09
         except Exception as e:  # pragma: no cover
@@ -87,7 +87,10 @@ class Yates09Model:
         a, b, cacr, cero = map(float, physical_params)
         E = np.asarray(dataset.forcings["E"], dtype=float)
         dt = np.asarray(dataset.dt, dtype=float)
-        y0 = float(dataset.y0) if dataset.y0 is not None else float(dataset.obs[0])
+        if y0 is None:
+            y0 = float(dataset.y0) if dataset.y0 is not None else float(dataset.obs[0])
+        else:
+            y0 = float(y0)
 
         y, _ = yates09(E, dt, a, b, cacr, cero, y0)
         return np.asarray(y, dtype=float)

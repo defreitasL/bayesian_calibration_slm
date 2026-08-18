@@ -41,7 +41,7 @@ def pbias(obs: np.ndarray, sim: np.ndarray) -> float:
     return 100.0 * (np.sum(s - o) / denom)
 
 
-def spbias(obs: np.ndarray, sim: np.ndarray) -> float:
+def pbias(obs: np.ndarray, sim: np.ndarray) -> float:
     """Signed PBIAS magnitude. Minimization metric: abs(PBIAS)."""
     return abs(pbias(obs, sim))
 
@@ -57,7 +57,7 @@ METRICS = {
     "kge": kge,
     "spearman": spearman_r,
     "pbias": pbias,
-    "spbias": spbias,
+    "pbias": pbias,
     "rmse": rmse,
 }
 
@@ -69,7 +69,7 @@ def objective_vector(obs: np.ndarray, sim: np.ndarray, metrics: tuple[str, ...])
     -----------
     - kge: objective = 1 - KGE
     - spearman: objective = 1 - rho
-    - spbias: objective = abs(PBIAS)
+    - pbias: objective = abs(PBIAS)
     - rmse: objective = RMSE
     """
     vals = []

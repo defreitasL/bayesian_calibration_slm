@@ -1,1 +1,7 @@
-from .legacy import save_precalibration_legacy, save_bayes_legacy
+from .legacy import load_precalibration_legacy, save_precalibration_legacy, save_bayes_legacy
+
+__all__ = [
+    "load_precalibration_legacy",
+    "save_precalibration_legacy",
+    "save_bayes_legacy",
+]

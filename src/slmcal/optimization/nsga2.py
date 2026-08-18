@@ -12,12 +12,12 @@ from slmcal.data import TimeSeriesDataset
 
 @dataclass(frozen=True)
 class NSGA2Config:
-    n_generations: int = 80
-    pop_size: int = 200
-    crossover_prob: float = 0.9
-    mutation_prob: float = 0.02
+    n_generations: int = 50
+    pop_size: int = 500
+    crossover_prob: float = 0.8
+    mutation_prob: float = 0.2
     tournament_pressure: int = 2
-    regeneration_rate: float = 0.25
+    regeneration_rate: float = 0.15
     n_restarts: int = 10
     random_seed: int | None = 42
 
@@ -30,9 +30,9 @@ class NSGA2Result:
 
     def select_valid(
         self,
-        kge_min: float | None = 0.0,
-        spearman_min: float | None = 0.0,
-        spbias_max: float | None = 25.0,
+        kge_min: float | None = 0.25,
+        spearman_min: float | None = 0.3,
+        pbias_max: float | None = 20.0,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Filter solutions using simple thresholds.
 
@@ -56,9 +56,9 @@ class NSGA2Result:
             rho_val = 1.0 - obj[:, i]
             keep &= rho_val >= spearman_min
 
-        if spbias_max is not None and "spbias" in self.metrics:
-            i = self.metrics.index("spbias")
-            keep &= obj[:, i] <= spbias_max
+        if pbias_max is not None and "pbias" in self.metrics:
+            i = self.metrics.index("pbias")
+            keep &= obj[:, i] <= pbias_max
 
         return self.individuals_raw[keep], self.objectives[keep]
 

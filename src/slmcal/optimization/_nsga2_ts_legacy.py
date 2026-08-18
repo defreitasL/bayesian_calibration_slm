@@ -1,7 +1,7 @@
 import numpy as np
 from numba import jit
 import math
-from fast_optimization.objectives_functions import multi_obj_func, select_best_solution
+from fast_optimization.objectives_functions import multi_obj_func, select_best_solution, select_best_solution_L2
 from fast_optimization.metrics import backtot
 
 def nsgaii_algorithm_ts(model_simulation, Obs, initialize_population, num_generations, population_size, cross_prob, mutation_rate, pressure, regeneration_rate, kstop, pcento, peps, index_metrics, n_restarts = 5):
@@ -108,16 +108,14 @@ def nsgaii_algorithm_ts(model_simulation, Obs, initialize_population, num_genera
             objectives = new_objectives
 
             # Early stopping based on improvement criteria
-            ii = select_best_solution(objectives)[0]
+            ii = select_best_solution_L2(objectives)[0]
             current_best_fitness = objectives[ii]
             best_fitness_history.append(current_best_fitness)
             best_individuals.append(population[ii])
 
-            ii_filt = np.where(((1-objectives[:, 0]) > 0) & ((objectives[:, 1]) < 25)& ((1-objectives[:, 2]) > 0))[0]
 
-
-            rest_individuals = np.vstack((rest_individuals, population[ii_filt]))
-            rest_objectives = np.vstack((rest_objectives, objectives[ii_filt]))
+            # rest_individuals = np.vstack((rest_individuals, population[ii_filt]))
+            # rest_objectives = np.vstack((rest_objectives, objectives[ii_filt]))
 
             if generation > kstop:
                 # Normalize objectives for proper comparison
@@ -149,9 +147,11 @@ def nsgaii_algorithm_ts(model_simulation, Obs, initialize_population, num_genera
                         print(f"{metrics_name_list[j]}: {(1 - current_best_fitness[j]):.3f}")
         # Select the best final solution
         if restart == 0:
-            total_objectives = np.vstack((rest_objectives, np.array(best_fitness_history)))
-            total_individuals = np.vstack((rest_individuals, np.array(best_individuals)))
-            best_index = select_best_solution(total_objectives)[0]
+            # total_objectives = np.vstack((rest_objectives, np.array(best_fitness_history)))
+            # total_individuals = np.vstack((rest_individuals, np.array(best_individuals)))
+            total_objectives = np.array(best_fitness_history)
+            total_individuals = np.array(best_individuals)
+            best_index = select_best_solution_L2(total_objectives)[0]
             best_fitness = total_objectives[best_index]
             best_individual = total_individuals[best_index]
             all_individuals = np.vstack((all_individuals, total_individuals))
@@ -162,11 +162,9 @@ def nsgaii_algorithm_ts(model_simulation, Obs, initialize_population, num_genera
             # print('-----------------------------')
 
         else:
-            total_objectives = np.vstack((rest_objectives, np.array(best_fitness_history)))
-            total_individuals = np.vstack((rest_individuals, np.array(best_individuals)))
-            total_objectives = np.vstack((total_objectives, np.array([best_fitness])))
-            total_individuals = np.vstack((total_individuals, np.array([best_individual])))
-            best_index = select_best_solution(total_objectives)[0]
+            total_objectives = np.vstack((total_objectives, np.array(best_fitness_history)))
+            total_individuals = np.vstack((total_individuals, np.array(best_individuals)))
+            best_index = select_best_solution_L2(total_objectives)[0]
             best_fitness = total_objectives[best_index]
             best_individual = total_individuals[best_index]
             all_individuals = np.vstack((all_individuals, total_individuals))
@@ -185,7 +183,7 @@ def nsgaii_algorithm_ts(model_simulation, Obs, initialize_population, num_genera
         else:
             print(f"{metrics_name_list[j]}: {(1 - best_fitness[j]):.3f}")
 
-    ii = select_best_solution(all_objectives)[0]
+    ii = select_best_solution_L2(all_objectives)[0]
     best_individual = all_individuals[ii]
     best_fitness = all_objectives[ii]
 

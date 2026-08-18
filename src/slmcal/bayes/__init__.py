@@ -15,6 +15,18 @@ from .blackbox import (
     blackbox_demcmc,
 )
 
+
+from .outputs import (
+    PosteriorSampler,
+    flatten_raw_parameter_samples,
+    posterior_parameter_sampler,
+    sample_prior_raw,
+    raw_to_physical_samples,
+    propagate_uncertainty_components,
+    save_bayesian_artifacts,
+    load_bayesian_artifacts,
+)
+
 # Optional PyMC backend (kept for compatibility)
 from . import pymc as pymc_backend
 
@@ -31,4 +43,12 @@ __all__ = [
     "BlackBoxResult",
     "blackbox_demcmc",
     "pymc_backend",
+    "PosteriorSampler",
+    "flatten_raw_parameter_samples",
+    "posterior_parameter_sampler",
+    "sample_prior_raw",
+    "raw_to_physical_samples",
+    "propagate_uncertainty_components",
+    "save_bayesian_artifacts",
+    "load_bayesian_artifacts",
 ]

@@ -16,11 +16,50 @@ pip install -e ".[bayes,plot,numba]"
 pip install -e ".[fastopt]"
 ```
 
-## Quickstart (synthetic)
+To install the exact versions used to produce the published results:
 
 ```bash
-python examples/00_synthetic_quickstart.py
+pip install -e ".[paper]"
 ```
+
+Further extras cover the model families that are not part of the published
+results: `spads` (pySPADS signal decomposition) and `moe` (mixture-of-experts,
+SARIMAX).
+
+## Reproducing the published results
+
+The two study sites (Angourie Back Beach and La Jolla Shores) are reproduced by
+running the following **in order**. Input data is in `data/`; all results are
+written to `outputs/`, which is not tracked in this repository.
+
+```bash
+python examples/00_prepare_data.py
+python examples/vitousek21_yates_Angourie.py
+python examples/vitousek21_yates_LaJolla.py
+jupyter notebook notebooks/regenerate_paper_figures.ipynb
+```
+
+`00_prepare_data.py` builds the single-series `*_default.nc` files that the two
+calibration scripts read, from the raw multi-transect files in `data/`. It must
+be run first.
+
+### Run configuration
+
+Both calibration scripts contain the settings used for the published results.
+The NSGA-II pre-calibration is identical for both sites (50 generations,
+population 500, 8 restarts, `kge`/`pbias`/`spearman` objectives, seed 42),
+followed by a copula-KDE prior and a gradient-free `DEMetropolisZ` sampler:
+
+| | Angourie | La Jolla |
+|---|---|---|
+| Chains | 6 | 4 |
+| Draws | 15 000 | 10 000 |
+| Tuning steps | 15 000 | 10 000 |
+| Calibration / validation split | 2010-01-01 | 2010-01-01 |
+
+Approximate cost on 6 cores: NSGA-II takes ~22 min for Angourie and ~7 min for
+La Jolla; MCMC sampling takes ~6 min and ~1.5 min respectively, plus posterior
+predictive sampling over the full record.
 
 ## Core concepts
 
@@ -41,14 +80,14 @@ Then:
 
 ```python
 from slmcal.core.workflow import CalibrationWorkflow
+from slmcal.optimization import NSGA2Config
 
 workflow = CalibrationWorkflow(model=my_model, dataset=my_dataset)
 
 nsga = workflow.precalibrate_nsga2(
-    metrics=("kge", "spbias", "spearman"),
-    n_generations=60,
-    pop_size=200,
-    n_restarts=10,
+    metrics=("kge", "pbias", "spearman"),
+    cfg=NSGA2Config(n_generations=60, pop_size=200, n_restarts=10),
+    backend="internal",
 )
 
 trace = workflow.bayesian_calibrate(
@@ -60,9 +99,28 @@ trace = workflow.bayesian_calibrate(
 )
 ```
 
+> The two calibration scripts under `examples/` do not use `CalibrationWorkflow`;
+> they call the underlying functions directly. Both routes are supported.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/slmcal/` | The package. Shoreline models, NSGA-II pre-calibration, Bayesian calibration, plotting. |
+| `src/pySPADS/` | Vendored SPADS signal-decomposition code, used by the mixture-of-experts models. |
+| `examples/` | Runnable scripts, including the two that produce the published results. |
+| `notebooks/` | `regenerate_paper_figures.ipynb`, which rebuilds every figure from `outputs/`. |
+| `data/` | Input NetCDF datasets for both sites. |
+| `outputs/` | Written at run time. Not tracked here — see the Zenodo archive. |
+
+Not every module is exercised by the published results: the package also carries
+mixture-of-experts, BART, SARIMAX and 2D/multi-transect (IH-MOOSE) code used in
+related work.
+
 ## Citation
 
-On going...
+Please cite the associated paper (in preparation). Software metadata for citing
+this release directly is in [`CITATION.cff`](CITATION.cff).
 
 ## NSGA-II backend and metric selection
 

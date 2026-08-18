@@ -3,7 +3,6 @@ __pycache__/
 *.pyo
 *.pyd
 *.so
-*.png
 *.log
 *.egg-info/
 dist/
@@ -14,7 +13,13 @@ build/
 .ruff_cache/
 .ipynb_checkpoints/
 .DS_Store
-*.nc
-*.zarr/
-figures/
+.vscode/
+
+# Generated results are archived separately (too large for GitHub).
 outputs/
+figures/
+*.zarr/
+
+# Input datasets are tracked; everything else NetCDF is not.
+*.nc
+!data/*.nc

@@ -24,8 +24,8 @@ class FastOptNSGA2Config:
     (`indexes = multi_obj_indexes(metrics)`).
     """
 
-    num_generations: int = 150
-    population_size: int = 2000
+    num_generations: int = 50
+    population_size: int = 500
     cross_prob: float = 0.8
     mutation_rate: float = 0.2
     regeneration_rate: float = 0.15
@@ -33,7 +33,7 @@ class FastOptNSGA2Config:
     kstop: int = 100
     pcento: float = 0.001
     peps: float = 1e-4
-    n_restarts: int = 30
+    n_restarts: int = 10
     random_seed: int | None = None
 
 
@@ -121,7 +121,7 @@ def run_nsga2_fastopt(
 
     best_ind, best_fit, all_ind, all_obj = nsgaii_algorithm_ts(
         model_simulation=model_simulation,
-        Obs=np.asarray(dataset.obs, dtype=float),
+        Obs=np.asarray(dataset.obs, dtype=float) if dataset.obs is not None else np.asarray(dataset.rot, dtype=float),
         initialize_population=init,
         num_generations=int(cfg.num_generations),
         population_size=int(cfg.population_size),

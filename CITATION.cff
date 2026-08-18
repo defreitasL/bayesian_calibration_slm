@@ -1,9 +1,23 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the associated paper."
 title: "slmcal: Bayesian calibration workflow for shoreline models"
+abstract: >-
+  Reproducible workflow for the Bayesian calibration of shoreline evolution
+  models, combining NSGA-II multi-objective pre-calibration to build informative
+  site-specific priors with PyMC sampling through a black-box forward model.
 authors:
-  - family-names: "de Freitas"
+  - family-names: "de Freitas Pereira"
     given-names: "Lucas"
-date-released: "2025-12-19"
-version: "0.1.0"
+    email: "freitasl@unican.es"
+    orcid: "https://orcid.org/0009-0001-0693-8038"
+repository-code: "https://github.com/defreitasL/bayesian_calibration_slm"
 license: "MIT"
+version: "1.0.0"
+date-released: "2026-08-18"
+keywords:
+  - shoreline
+  - bayesian
+  - calibration
+  - nsga-ii
+  - coastal
+  - uncertainty
